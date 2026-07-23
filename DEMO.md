@@ -1,5 +1,7 @@
 # Demo summary
 
+To run, navigate to http://<server>:8080. The UI lets you toggle the 2 scenarios on and off.
+
 ## Default
 
 ![CPU Fine](img/0_cpu_fine.png)
