@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: profiling-demo
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+demo:
+  scenarios:
+    blocking:
+      worker-count: ${DEMO_BLOCKING_WORKER_COUNT:8}
+      lock-hold-millis: ${DEMO_BLOCKING_LOCK_HOLD_MILLIS:900}
+      gap-millis: ${DEMO_BLOCKING_GAP_MILLIS:50}
+    memory-leak:
+      allocation-megabytes: ${DEMO_MEMORY_ALLOCATION_MEGABYTES:1}
+      allocation-interval-millis: ${DEMO_MEMORY_ALLOCATION_INTERVAL_MILLIS:250}
+      max-retained-megabytes: ${DEMO_MEMORY_MAX_RETAINED_MEGABYTES:128}

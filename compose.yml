@@ -1,0 +1,71 @@
+services:
+  otel-collector:
+    image: "quay.io/signalfx/splunk-otel-collector:${SPLUNK_OTEL_COLLECTOR_VERSION:-0.156.0}"
+    network_mode: host
+    environment:
+      # Complete Splunk gateway configuration. Endpoint defaults are derived from the realm,
+      # but each can be overridden in .env for proxies or legacy domains.
+      SPLUNK_ACCESS_TOKEN: "${SPLUNK_ACCESS_TOKEN:?Copy .env.example to .env and set SPLUNK_ACCESS_TOKEN}"
+      SPLUNK_REALM: "${SPLUNK_REALM:?Copy .env.example to .env and set SPLUNK_REALM}"
+      SPLUNK_CONFIG: "/etc/otel/collector/gateway_config.yaml"
+      SPLUNK_API_URL: "${SPLUNK_API_URL:-https://api.${SPLUNK_REALM}.observability.splunkcloud.com}"
+      SPLUNK_INGEST_URL: "${SPLUNK_INGEST_URL:-https://ingest.${SPLUNK_REALM}.observability.splunkcloud.com}"
+      SPLUNK_HEC_URL: "${SPLUNK_HEC_URL:-https://ingest.${SPLUNK_REALM}.observability.splunkcloud.com/v1/log}"
+      SPLUNK_HEC_TOKEN: "${SPLUNK_HEC_TOKEN:-${SPLUNK_ACCESS_TOKEN}}"
+      SPLUNK_MEMORY_LIMIT_MIB: "${SPLUNK_MEMORY_LIMIT_MIB:-512}"
+      SPLUNK_LISTEN_INTERFACE: "0.0.0.0"
+      SPLUNK_COLLECTOR_LOG_LEVEL: "${SPLUNK_COLLECTOR_LOG_LEVEL:-info}"
+    restart: unless-stopped
+    stop_grace_period: 15s
+
+  profiling-demo:
+    build:
+      context: .
+      network: host
+      args:
+        SPLUNK_OTEL_JAVA_AGENT_VERSION: "${SPLUNK_OTEL_JAVA_AGENT_VERSION:-2.29.0}"
+    image: profiling-demo:1.0.0
+    network_mode: host
+    depends_on:
+      otel-collector:
+        condition: service_started
+    environment:
+      # Application workload configuration.
+      SERVER_PORT: "${DEMO_PORT:-8080}"
+      DEMO_BLOCKING_WORKER_COUNT: "${DEMO_BLOCKING_WORKER_COUNT:-8}"
+      DEMO_BLOCKING_LOCK_HOLD_MILLIS: "${DEMO_BLOCKING_LOCK_HOLD_MILLIS:-900}"
+      DEMO_BLOCKING_GAP_MILLIS: "${DEMO_BLOCKING_GAP_MILLIS:-50}"
+      DEMO_MEMORY_ALLOCATION_MEGABYTES: "${DEMO_MEMORY_ALLOCATION_MEGABYTES:-1}"
+      DEMO_MEMORY_ALLOCATION_INTERVAL_MILLIS: "${DEMO_MEMORY_ALLOCATION_INTERVAL_MILLIS:-250}"
+      DEMO_MEMORY_MAX_RETAINED_MEGABYTES: "${DEMO_MEMORY_MAX_RETAINED_MEGABYTES:-128}"
+      JAVA_TOOL_OPTIONS: "${JAVA_TOOL_OPTIONS:--Xms256m -Xmx384m}"
+
+      # Complete Java agent OTLP and resource configuration.
+      OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-profiling-demo}"
+      OTEL_RESOURCE_ATTRIBUTES: "service.version=${OTEL_SERVICE_VERSION:-1.0.0},deployment.environment=${OTEL_DEPLOYMENT_ENVIRONMENT:-demo},deployment.environment.name=${OTEL_DEPLOYMENT_ENVIRONMENT:-demo}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://127.0.0.1:4317"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      OTEL_EXPORTER_OTLP_TIMEOUT: "${OTEL_EXPORTER_OTLP_TIMEOUT:-10000}"
+      OTEL_TRACES_EXPORTER: "otlp"
+      OTEL_METRICS_EXPORTER: "${OTEL_METRICS_EXPORTER:-otlp}"
+      OTEL_LOGS_EXPORTER: "none"
+      SPLUNK_METRICS_ENABLED: "${SPLUNK_METRICS_ENABLED:-true}"
+
+      # AlwaysOn Profiling uses the collector's OTLP logs pipeline independently
+      # from application log export.
+      SPLUNK_PROFILER_ENABLED: "${SPLUNK_PROFILER_ENABLED:-true}"
+      SPLUNK_PROFILER_MEMORY_ENABLED: "${SPLUNK_PROFILER_MEMORY_ENABLED:-true}"
+      SPLUNK_PROFILER_LOGS_ENDPOINT: "http://127.0.0.1:4317"
+      SPLUNK_PROFILER_OTLP_PROTOCOL: "grpc"
+      SPLUNK_PROFILER_CALL_STACK_INTERVAL: "${SPLUNK_PROFILER_CALL_STACK_INTERVAL:-10000ms}"
+      SPLUNK_PROFILER_MEMORY_EVENT_RATE: "${SPLUNK_PROFILER_MEMORY_EVENT_RATE:-150/s}"
+      OTEL_JAVAAGENT_DEBUG: "${OTEL_JAVAAGENT_DEBUG:-false}"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://localhost:${DEMO_PORT:-8080}/actuator/health/readiness"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 10s

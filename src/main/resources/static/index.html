@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Control safe Java profiling scenarios for a Splunk Observability Cloud demo.">
+    <title>Java Profiling Demo</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main class="shell">
+    <header>
+        <p class="eyebrow">Splunk Observability Cloud</p>
+        <h1>Java profiling scenarios</h1>
+        <p class="lede">
+            Turn a workload on, observe its profile, then turn it off to return the application
+            to normal.
+        </p>
+    </header>
+
+    <section class="status-bar" aria-live="polite">
+        <span class="status-dot" id="connection-dot"></span>
+        <span id="connection-status">Connecting to the application…</span>
+    </section>
+
+    <section id="scenario-list" class="scenario-grid" aria-label="Profiling scenarios"></section>
+
+    <footer>
+        <a href="/actuator/health" target="_blank" rel="noreferrer">Application health</a>
+        <span>•</span>
+        <code>profiling-demo 1.0</code>
+    </footer>
+</main>
+
+<template id="scenario-template">
+    <article class="scenario-card">
+        <div class="card-heading">
+            <div>
+                <p class="scenario-state">Normal</p>
+                <h2></h2>
+            </div>
+            <label class="switch">
+                <input type="checkbox">
+                <span class="slider"></span>
+                <span class="sr-only">Toggle scenario</span>
+            </label>
+        </div>
+        <p class="description"></p>
+        <dl class="details"></dl>
+        <p class="card-error" role="alert"></p>
+    </article>
+</template>
+
+<script src="/app.js" defer></script>
+</body>
+</html>
